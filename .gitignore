@@ -30,5 +30,6 @@ data/
 # Old Supabase auth (not used anymore)
 supabase/
 
-# Vercel config (deploying on Render instead)
+# Vercel link (keeps deploy seamless)
 .vercel
+!.vercel/project.json
