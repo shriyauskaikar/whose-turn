@@ -124,19 +124,6 @@ export default function CreateSection() {
                 );
               })}
             </div>
-
-            <button
-              type="button"
-              onClick={() => navigate('/manage-people')}
-              className="w-full mt-3 py-2 rounded-xl border-2 border-dashed text-sm font-medium transition-all"
-              style={{
-                borderColor: '#C8BBA8',
-                color: '#6B5E4A',
-                backgroundColor: 'rgba(255,255,255,0.3)',
-              }}
-            >
-              + Manage profiles to add someone new
-            </button>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

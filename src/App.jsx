@@ -6,7 +6,6 @@ import Dashboard from './pages/Dashboard';
 import SectionDetail from './pages/SectionDetail';
 import CreateSection from './pages/CreateSection';
 import Stats from './pages/Stats';
-import ManagePeople from './pages/ManagePeople';
 
 function ProtectedRoute({ children }) {
   const { person } = useAuth();
@@ -23,7 +22,6 @@ export default function App() {
       <Route path="/section/:id" element={<ProtectedRoute><SectionDetail /></ProtectedRoute>} />
       <Route path="/section/new" element={<ProtectedRoute><CreateSection /></ProtectedRoute>} />
       <Route path="/stats" element={<ProtectedRoute><Stats /></ProtectedRoute>} />
-      <Route path="/manage-people" element={<ProtectedRoute><ManagePeople /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
