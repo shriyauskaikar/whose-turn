@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIdentity } from '../lib/IdentityContext';
+import { useAuth } from '../lib/AuthContext';
 import { getPeople, getColors, createSection, createPerson } from '../lib/api';
 
 export default function CreateSection() {
-  const { person } = useIdentity();
+  const { person } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [allPeople, setAllPeople] = useState([]);

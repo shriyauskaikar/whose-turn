@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIdentity } from '../lib/IdentityContext';
+import { useAuth } from '../lib/AuthContext';
 import { getSections, createEntry, deleteEntry, getEntries } from '../lib/api';
 
 function todayStr() {
@@ -171,7 +171,7 @@ function SectionCard({ section, person, onRefresh }) {
 }
 
 export default function Dashboard() {
-  const { person } = useIdentity();
+  const { person, household, logout } = useAuth();
   const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -212,20 +212,30 @@ export default function Dashboard() {
             Whose Turn
           </h1>
           <p className="text-sm" style={{ color: '#8B7D6B' }}>
-            Hey, {person.name}!
+            {household?.name} · Hey, {person.name}!
           </p>
         </div>
-        <button
-          onClick={() => navigate('/stats')}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.7)',
-            color: '#1E4A4A',
-            border: '1px solid rgba(30,74,74,0.15)',
-          }}
-        >
-          Stats
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/stats')}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              color: '#1E4A4A',
+              border: '1px solid rgba(30,74,74,0.15)',
+            }}
+          >
+            Stats
+          </button>
+          <button
+            onClick={logout}
+            className="px-2 py-1.5 rounded-lg text-xs transition-all"
+            style={{ color: '#A89B88' }}
+            title="Switch household or person"
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
 
       {/* Sections list */}

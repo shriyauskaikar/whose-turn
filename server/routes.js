@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────
-// Fixed color palette — people pick from here,
-// used colors are hidden from the picker.
-// ─────────────────────────────────────────────
 export const COLOR_PALETTE = [
   { name: 'Rose',     hex: '#E11D48' },
   { name: 'Orange',   hex: '#EA580C' },
@@ -19,36 +15,33 @@ export const COLOR_PALETTE = [
 
 // ───────────── People routes ─────────────
 export function peopleRoutes(router) {
-  // GET /api/people — list all people
-  router.get('/people', async (req, res) => {
-    const db = req.db;
-    const result = await db.execute('SELECT id, name, color, created_at FROM people ORDER BY name');
+  router.get('/', async (req, res) => {
+    const result = await req.db.execute({
+      sql: 'SELECT id, name, color, created_at FROM people WHERE household_id = ? ORDER BY name',
+      args: [req.household.id],
+    });
     res.json(result.rows);
   });
 
-  // POST /api/people — create a new person
-  router.post('/people', async (req, res) => {
+  router.post('/', async (req, res) => {
     const db = req.db;
     const { name, color } = req.body;
-
-    if (!name || !color) {
-      return res.status(400).json({ error: 'Name and color are required' });
-    }
+    if (!name || !color) return res.status(400).json({ error: 'Name and color are required' });
 
     try {
       const result = await db.execute({
-        sql: 'INSERT INTO people (name, color) VALUES (?, ?)',
-        args: [name, color],
+        sql: 'INSERT INTO people (household_id, name, color) VALUES (?, ?, ?)',
+        args: [req.household.id, name, color],
       });
-      const personResult = await db.execute({
+      const person = (await db.execute({
         sql: 'SELECT id, name, color, created_at FROM people WHERE id = ?',
         args: [result.lastInsertRowid],
-      });
-      res.status(201).json(personResult.rows[0]);
+      })).rows[0];
+      res.status(201).json(person);
     } catch (err) {
       if (err.message?.includes('UNIQUE')) {
-        const taken = err.message.includes('name') ? 'name' : 'color';
-        return res.status(409).json({ error: `That ${taken} is already taken` });
+        const field = err.message.includes('name') ? 'name' : 'color';
+        return res.status(409).json({ error: `That ${field} is already taken in your household` });
       }
       throw err;
     }
@@ -57,146 +50,134 @@ export function peopleRoutes(router) {
 
 // ───────────── Sections routes ─────────────
 export function sectionsRoutes(router) {
-  // GET /api/sections — list all sections (?person_id= for user's sections)
-  router.get('/sections', async (req, res) => {
-    const db = req.db;
+  router.get('/', async (req, res) => {
     const { person_id } = req.query;
-
     let sections;
+
     if (person_id) {
-      const result = await db.execute({
+      sections = (await req.db.execute({
         sql: `SELECT s.id, s.name, s.created_at
               FROM sections s
               JOIN section_members sm ON sm.section_id = s.id
-              WHERE sm.person_id = ?
+              WHERE s.household_id = ? AND sm.person_id = ?
               ORDER BY s.name`,
-        args: [person_id],
-      });
-      sections = result.rows;
+        args: [req.household.id, person_id],
+      })).rows;
     } else {
-      const result = await db.execute('SELECT id, name, created_at FROM sections ORDER BY name');
-      sections = result.rows;
+      sections = (await req.db.execute({
+        sql: 'SELECT id, name, created_at FROM sections WHERE household_id = ? ORDER BY name',
+        args: [req.household.id],
+      })).rows;
     }
 
-    // Attach members to each section
     for (const section of sections) {
-      const membersResult = await db.execute({
+      section.members = (await req.db.execute({
         sql: `SELECT p.id, p.name, p.color
               FROM section_members sm
               JOIN people p ON p.id = sm.person_id
-              WHERE sm.section_id = ?
+              WHERE sm.section_id = ? AND sm.household_id = ?
               ORDER BY p.name`,
-        args: [section.id],
-      });
-      section.members = membersResult.rows;
+        args: [section.id, req.household.id],
+      })).rows;
     }
 
     res.json(sections);
   });
 
-  // POST /api/sections — create a section with member list
-  router.post('/sections', async (req, res) => {
+  router.post('/', async (req, res) => {
     const db = req.db;
     const { name, member_ids } = req.body;
-
-    if (!name || !member_ids || !Array.isArray(member_ids) || member_ids.length === 0) {
+    if (!name || !member_ids?.length) {
       return res.status(400).json({ error: 'Name and at least one member are required' });
     }
 
     try {
       const tx = await db.transaction('write');
-
       const sectionResult = await tx.execute({
-        sql: 'INSERT INTO sections (name) VALUES (?)',
-        args: [name],
+        sql: 'INSERT INTO sections (household_id, name) VALUES (?, ?)',
+        args: [req.household.id, name],
       });
       const sectionId = sectionResult.lastInsertRowid;
 
       for (const personId of member_ids) {
         await tx.execute({
-          sql: 'INSERT INTO section_members (section_id, person_id) VALUES (?, ?)',
-          args: [sectionId, personId],
+          sql: 'INSERT INTO section_members (household_id, section_id, person_id) VALUES (?, ?, ?)',
+          args: [req.household.id, sectionId, personId],
         });
       }
-
       await tx.commit();
 
-      // Fetch the full section with members
-      const sectionResult2 = await db.execute({
+      const section = (await db.execute({
         sql: 'SELECT id, name, created_at FROM sections WHERE id = ?',
         args: [sectionId],
-      });
-      const section = sectionResult2.rows[0];
+      })).rows[0];
 
-      const membersResult = await db.execute({
+      section.members = (await db.execute({
         sql: `SELECT p.id, p.name, p.color
               FROM section_members sm
               JOIN people p ON p.id = sm.person_id
-              WHERE sm.section_id = ?
+              WHERE sm.section_id = ? AND sm.household_id = ?
               ORDER BY p.name`,
-        args: [sectionId],
-      });
-      section.members = membersResult.rows;
+        args: [sectionId, req.household.id],
+      })).rows;
 
       res.status(201).json(section);
     } catch (err) {
       if (err.message?.includes('UNIQUE')) {
-        return res.status(409).json({ error: 'A section with that name already exists' });
+        return res.status(409).json({ error: 'A section with that name already exists in your household' });
       }
       throw err;
     }
   });
 
-  // GET /api/sections/:id — single section with detail
-  router.get('/sections/:id', async (req, res) => {
+  router.get('/:id', async (req, res) => {
     const db = req.db;
+    const { year, month } = req.query;
+    const now = new Date();
+    const y = parseInt(year) || now.getFullYear();
+    const m = parseInt(month) || (now.getMonth() + 1);
 
-    const sectionResult = await db.execute({
-      sql: 'SELECT id, name, created_at FROM sections WHERE id = ?',
-      args: [req.params.id],
-    });
-    const section = sectionResult.rows[0];
+    const section = (await db.execute({
+      sql: 'SELECT id, name, created_at FROM sections WHERE id = ? AND household_id = ?',
+      args: [req.params.id, req.household.id],
+    })).rows[0];
 
-    if (!section) {
-      return res.status(404).json({ error: 'Section not found' });
-    }
+    if (!section) return res.status(404).json({ error: 'Section not found' });
 
-    const membersResult = await db.execute({
+    section.members = (await db.execute({
       sql: `SELECT p.id, p.name, p.color
             FROM section_members sm
             JOIN people p ON p.id = sm.person_id
-            WHERE sm.section_id = ?
+            WHERE sm.section_id = ? AND sm.household_id = ?
             ORDER BY p.name`,
-      args: [section.id],
-    });
-    section.members = membersResult.rows;
+      args: [section.id, req.household.id],
+    })).rows;
 
-    // Get recent entries (last 5 weeks from today)
-    const fiveWeeksAgo = new Date();
-    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35);
-    const sinceStr = fiveWeeksAgo.toISOString().split('T')[0];
+    // Entries for the requested month
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const entriesResult = await db.execute({
-      sql: `SELECT e.id, e.section_id, e.person_id, e.date, p.name AS person_name, p.color AS person_color
+    section.entries = (await db.execute({
+      sql: `SELECT e.id, e.section_id, e.person_id, e.date,
+                   p.name AS person_name, p.color AS person_color
             FROM entries e
             JOIN people p ON p.id = e.person_id
-            WHERE e.section_id = ? AND e.date >= ?
-            ORDER BY e.date DESC`,
-      args: [section.id, sinceStr],
-    });
-    section.entries = entriesResult.rows;
+            WHERE e.section_id = ? AND e.household_id = ? AND e.date >= ? AND e.date <= ?
+            ORDER BY e.date`,
+      args: [section.id, req.household.id, startDate, endDate],
+    })).rows;
 
-    // Per-person totals for this section
-    const totalsResult = await db.execute({
+    // Totals (all-time for this section)
+    section.totals = (await db.execute({
       sql: `SELECT e.person_id, p.name, p.color, COUNT(*) AS count
             FROM entries e
             JOIN people p ON p.id = e.person_id
-            WHERE e.section_id = ?
+            WHERE e.section_id = ? AND e.household_id = ?
             GROUP BY e.person_id
             ORDER BY count DESC`,
-      args: [section.id],
-    });
-    section.totals = totalsResult.rows;
+      args: [section.id, req.household.id],
+    })).rows;
 
     res.json(section);
   });
@@ -204,137 +185,112 @@ export function sectionsRoutes(router) {
 
 // ───────────── Entries routes ─────────────
 export function entriesRoutes(router) {
-  // POST /api/entries — log that someone did a task
-  router.post('/entries', async (req, res) => {
+  router.post('/', async (req, res) => {
     const db = req.db;
     const { section_id, person_id, date } = req.body;
-
     if (!section_id || !person_id || !date) {
       return res.status(400).json({ error: 'section_id, person_id, and date are required' });
     }
 
     try {
       const result = await db.execute({
-        sql: 'INSERT INTO entries (section_id, person_id, date) VALUES (?, ?, ?)',
-        args: [section_id, person_id, date],
+        sql: 'INSERT INTO entries (household_id, section_id, person_id, date) VALUES (?, ?, ?, ?)',
+        args: [req.household.id, section_id, person_id, date],
       });
-
-      const entryResult = await db.execute({
-        sql: `SELECT e.id, e.section_id, e.person_id, e.date, p.name AS person_name, p.color AS person_color
-              FROM entries e
-              JOIN people p ON p.id = e.person_id
+      const entry = (await db.execute({
+        sql: `SELECT e.id, e.section_id, e.person_id, e.date,
+                     p.name AS person_name, p.color AS person_color
+              FROM entries e JOIN people p ON p.id = e.person_id
               WHERE e.id = ?`,
         args: [result.lastInsertRowid],
-      });
-
-      res.status(201).json(entryResult.rows[0]);
+      })).rows[0];
+      res.status(201).json(entry);
     } catch (err) {
       if (err.message?.includes('UNIQUE')) {
-        return res.status(409).json({ error: 'Entry already exists for this person on this date in this section' });
+        return res.status(409).json({ error: 'Entry already exists for this person on this date' });
       }
       throw err;
     }
   });
 
-  // DELETE /api/entries/:id — undo an entry
-  router.delete('/entries/:id', async (req, res) => {
-    const db = req.db;
-    const result = await db.execute({
-      sql: 'DELETE FROM entries WHERE id = ?',
-      args: [req.params.id],
+  router.delete('/:id', async (req, res) => {
+    const result = await req.db.execute({
+      sql: 'DELETE FROM entries WHERE id = ? AND household_id = ?',
+      args: [req.params.id, req.household.id],
     });
-
-    if (result.rowsAffected === 0) {
-      return res.status(404).json({ error: 'Entry not found' });
-    }
+    if (result.rowsAffected === 0) return res.status(404).json({ error: 'Entry not found' });
     res.json({ ok: true });
   });
 
-  // GET /api/entries?section_id=&date= — check who did what
-  router.get('/entries', async (req, res) => {
-    const db = req.db;
+  router.get('/', async (req, res) => {
     const { section_id, date } = req.query;
+    if (!section_id) return res.status(400).json({ error: 'section_id is required' });
 
-    if (!section_id) {
-      return res.status(400).json({ error: 'section_id is required' });
-    }
-
-    let entries;
+    let query;
     if (date) {
-      const result = await db.execute({
-        sql: `SELECT e.id, e.section_id, e.person_id, e.date, p.name AS person_name, p.color AS person_color
-              FROM entries e
-              JOIN people p ON p.id = e.person_id
-              WHERE e.section_id = ? AND e.date = ?
+      query = {
+        sql: `SELECT e.id, e.section_id, e.person_id, e.date,
+                     p.name AS person_name, p.color AS person_color
+              FROM entries e JOIN people p ON p.id = e.person_id
+              WHERE e.section_id = ? AND e.household_id = ? AND e.date = ?
               ORDER BY e.person_id`,
-        args: [section_id, date],
-      });
-      entries = result.rows;
+        args: [section_id, req.household.id, date],
+      };
     } else {
-      const result = await db.execute({
-        sql: `SELECT e.id, e.section_id, e.person_id, e.date, p.name AS person_name, p.color AS person_color
-              FROM entries e
-              JOIN people p ON p.id = e.person_id
-              WHERE e.section_id = ?
+      query = {
+        sql: `SELECT e.id, e.section_id, e.person_id, e.date,
+                     p.name AS person_name, p.color AS person_color
+              FROM entries e JOIN people p ON p.id = e.person_id
+              WHERE e.section_id = ? AND e.household_id = ?
               ORDER BY e.date DESC, e.person_id`,
-        args: [section_id],
-      });
-      entries = result.rows;
+        args: [section_id, req.household.id],
+      };
     }
 
-    res.json(entries);
+    res.json((await req.db.execute(query)).rows);
   });
 }
 
 // ───────────── Stats routes ─────────────
 export function statsRoutes(router) {
-  // GET /api/stats — overall stats per person
-  router.get('/stats', async (req, res) => {
+  router.get('/', async (req, res) => {
     const db = req.db;
     const { person_id } = req.query;
+    const hid = req.household.id;
 
-    // All-time totals per person across all sections
     let allTotals;
     if (person_id) {
-      const result = await db.execute({
+      allTotals = (await db.execute({
         sql: `SELECT p.id, p.name, p.color, COUNT(e.id) AS count
-              FROM people p
-              LEFT JOIN entries e ON e.person_id = p.id
-              WHERE p.id = ?
-              GROUP BY p.id
-              ORDER BY count DESC`,
-        args: [person_id],
-      });
-      allTotals = result.rows;
+              FROM people p LEFT JOIN entries e ON e.person_id = p.id AND e.household_id = p.household_id
+              WHERE p.id = ? AND p.household_id = ?
+              GROUP BY p.id ORDER BY count DESC`,
+        args: [person_id, hid],
+      })).rows;
     } else {
-      allTotals = (await db.execute(
-        `SELECT p.id, p.name, p.color, COUNT(e.id) AS count
-         FROM people p
-         LEFT JOIN entries e ON e.person_id = p.id
-         GROUP BY p.id
-         ORDER BY count DESC`
-      )).rows;
+      allTotals = (await db.execute({
+        sql: `SELECT p.id, p.name, p.color, COUNT(e.id) AS count
+              FROM people p LEFT JOIN entries e ON e.person_id = p.id AND e.household_id = p.household_id
+              WHERE p.household_id = ?
+              GROUP BY p.id ORDER BY count DESC`,
+        args: [hid],
+      })).rows;
     }
 
-    // Per-section breakdown
-    const perSectionSql = `
-      SELECT s.id AS section_id, s.name AS section_name,
-             p.id AS person_id, p.name AS person_name,
-             p.color AS person_color, COUNT(e.id) AS count
-      FROM sections s
-      JOIN section_members sm ON sm.section_id = s.id
-      JOIN people p ON p.id = sm.person_id
-      LEFT JOIN entries e ON e.section_id = s.id AND e.person_id = p.id
-      ${person_id ? 'WHERE p.id = ?' : ''}
-      GROUP BY s.id, p.id
-      ORDER BY s.name, p.name
-    `;
+    const perSectionRows = (await db.execute({
+      sql: `SELECT s.id AS section_id, s.name AS section_name,
+                   p.id AS person_id, p.name AS person_name,
+                   p.color AS person_color, COUNT(e.id) AS count
+            FROM sections s
+            JOIN section_members sm ON sm.section_id = s.id
+            JOIN people p ON p.id = sm.person_id
+            LEFT JOIN entries e ON e.section_id = s.id AND e.person_id = p.id
+            WHERE s.household_id = ?
+            GROUP BY s.id, p.id
+            ORDER BY s.name, p.name`,
+      args: [hid],
+    })).rows;
 
-    const perSectionRows = person_id
-      ? (await db.execute({ sql: perSectionSql, args: [person_id] })).rows
-      : (await db.execute(perSectionSql)).rows;
-
-    // Group by section
     const sectionMap = {};
     for (const row of perSectionRows) {
       if (!sectionMap[row.section_id]) {

@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import db from './db.js';
+import { authMiddleware, authRoutes } from './auth.js';
 import { peopleRoutes, sectionsRoutes, entriesRoutes, statsRoutes, COLOR_PALETTE } from './routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,16 +23,52 @@ app.use((req, _res, next) => {
   next();
 });
 
+// ───────────── Resolve household from token ─────────────
+app.use(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const result = await db.execute({
+      sql: 'SELECT id, name FROM households WHERE session_token = ?',
+      args: [token],
+    });
+    if (result.rows.length > 0) {
+      req.household = result.rows[0];
+      req.householdToken = token;
+    }
+  }
+  next();
+});
+
 // ───────────── API Routes ─────────────
 const api = express.Router({ mergeParams: true });
-peopleRoutes(api);
-sectionsRoutes(api);
-entriesRoutes(api);
-statsRoutes(api);
 
-// Color palette endpoint (tells frontend which colors are taken)
-api.get('/colors', async (_req, res) => {
-  const usedRows = await db.execute('SELECT color FROM people');
+// Auth routes (public — no auth middleware)
+authRoutes(api);
+
+// Protected routes via sub-routers
+const peopleRouter = express.Router({ mergeParams: true });
+api.use('/people', authMiddleware, peopleRouter);
+peopleRoutes(peopleRouter);
+
+const sectionsRouter = express.Router({ mergeParams: true });
+api.use('/sections', authMiddleware, sectionsRouter);
+sectionsRoutes(sectionsRouter);
+
+const entriesRouter = express.Router({ mergeParams: true });
+api.use('/entries', authMiddleware, entriesRouter);
+entriesRoutes(entriesRouter);
+
+const statsRouter = express.Router({ mergeParams: true });
+api.use('/stats', authMiddleware, statsRouter);
+statsRoutes(statsRouter);
+
+// Color palette (protected)
+api.get('/colors', authMiddleware, async (req, res) => {
+  const usedRows = await db.execute({
+    sql: 'SELECT color FROM people WHERE household_id = ?',
+    args: [req.household.id],
+  });
   const usedColors = usedRows.rows.map(r => r.color);
   const available = COLOR_PALETTE.map(c => ({
     ...c,
@@ -42,7 +79,7 @@ api.get('/colors', async (_req, res) => {
 
 app.use('/api', api);
 
-// ───────────── Serve static frontend (local only — Vercel handles this in production) ─────────────
+// ───────────── Serve static frontend (local) ─────────────
 if (!process.env.VERCEL) {
   const distPath = path.join(__dirname, '..', 'dist');
   if (fs.existsSync(distPath)) {
@@ -56,7 +93,7 @@ if (!process.env.VERCEL) {
 // ───────────── Export for Vercel ─────────────
 export default app;
 
-// ───────────── Start (when run directly, not imported by Vercel) ─────────────
+// ───────────── Start (when run directly) ─────────────
 const isEntryPoint = process.argv[1]?.replace(/\\/g, '/').endsWith('server/index.js');
 if (isEntryPoint) {
   app.listen(PORT, () => {

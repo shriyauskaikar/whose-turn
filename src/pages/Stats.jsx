@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useIdentity } from '../lib/IdentityContext';
+import { useAuth } from '../lib/AuthContext';
 import { getStats } from '../lib/api';
 
 function Bar({ value, max, color, label, showLabel = true }) {
@@ -27,7 +27,7 @@ function Bar({ value, max, color, label, showLabel = true }) {
 }
 
 export default function Stats() {
-  const { person } = useIdentity();
+  const { person } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
