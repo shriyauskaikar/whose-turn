@@ -228,12 +228,12 @@ export default function Dashboard() {
             Stats
           </button>
           <button
-            onClick={() => navigate('/pick-person')}
-            className="px-2 py-1.5 rounded-lg text-xs transition-all"
-            style={{ color: '#A89B88' }}
-            title="Switch profile or add someone"
+            onClick={() => navigate('/settings')}
+            className="px-3 py-1.5 rounded-lg text-xs transition-all"
+            style={{ color: '#A89B88', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(30,74,74,0.15)' }}
+            title="Settings, members & logout"
           >
-            ⚙️
+            ⚙️ Settings
           </button>
         </div>
       </div>
