@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 export const COLOR_PALETTE = [
   { name: 'Rose',     hex: '#E11D48' },
   { name: 'Orange',   hex: '#EA580C' },
@@ -25,18 +27,21 @@ export function peopleRoutes(router) {
 
   router.post('/', async (req, res) => {
     const db = req.db;
-    const { name, color } = req.body;
+    const { name, color, password } = req.body;
     if (!name || !color) return res.status(400).json({ error: 'Name and color are required' });
+
+    const password_hash = password ? await bcrypt.hash(password, 10) : null;
 
     try {
       const result = await db.execute({
-        sql: 'INSERT INTO people (household_id, name, color) VALUES (?, ?, ?)',
-        args: [req.household.id, name, color],
+        sql: 'INSERT INTO people (household_id, name, color, password_hash) VALUES (?, ?, ?, ?)',
+        args: [req.household.id, name, color, password_hash],
       });
-      const person = (await db.execute({
+      const personRows = (await db.execute({
         sql: 'SELECT id, name, color, created_at FROM people WHERE id = ?',
         args: [result.lastInsertRowid],
-      })).rows[0];
+      })).rows;
+      const person = { ...personRows[0], has_password: !!password_hash };
       res.status(201).json(person);
     } catch (err) {
       if (err.message?.includes('UNIQUE')) {

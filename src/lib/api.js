@@ -33,10 +33,10 @@ async function request(path, options = {}) {
 }
 
 // ─────────── Auth ───────────
-export function signup(household_name, password, person_name, person_color) {
+export function signup(household_name, password, person_name, person_color, person_password) {
   return request('/auth/signup', {
     method: 'POST',
-    body: JSON.stringify({ household_name, password, person_name, person_color }),
+    body: JSON.stringify({ household_name, password, person_name, person_color, person_password }),
   });
 }
 
@@ -55,6 +55,20 @@ export function logout() {
   return request('/auth/logout', { method: 'POST' });
 }
 
+export function verifyPerson(person_id, password) {
+  return request('/auth/verify-person', {
+    method: 'POST',
+    body: JSON.stringify({ person_id, password }),
+  });
+}
+
+export function setPersonPassword(person_id, password) {
+  return request('/auth/set-person-password', {
+    method: 'POST',
+    body: JSON.stringify({ person_id, password }),
+  });
+}
+
 // ─────────── Colors ───────────
 export function getColors() {
   return request('/colors');
@@ -65,10 +79,10 @@ export function getPeople() {
   return request('/people');
 }
 
-export function createPerson(name, color) {
+export function createPerson(name, color, password) {
   return request('/people', {
     method: 'POST',
-    body: JSON.stringify({ name, color }),
+    body: JSON.stringify({ name, color, password }),
   });
 }
 

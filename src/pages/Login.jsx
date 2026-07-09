@@ -19,6 +19,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [yourName, setYourName] = useState('');
   const [yourColor, setYourColor] = useState(ALL_COLORS[0].hex);
+  const [yourPin, setYourPin] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +35,7 @@ export default function Login() {
 
     try {
       if (mode === 'signup') {
-        await signup(hhName, password, yourName, yourColor);
+        await signup(hhName, password, yourName, yourColor, yourPin || undefined);
         navigate('/dashboard');
       } else {
         const data = await login(hhName, password);
@@ -126,6 +127,15 @@ export default function Login() {
                       style={{ backgroundColor: c.hex }} title={c.name} />
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>
+                  Profile PIN <span className="text-xs font-normal" style={{ color: '#A89B88' }}>(optional — lock your profile)</span>
+                </label>
+                <input type="password" value={yourPin} onChange={e => setYourPin(e.target.value)}
+                  placeholder="At least 4 characters"
+                  className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2"
+                  style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
               </div>
             </>
           )}

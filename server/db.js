@@ -21,22 +21,7 @@ if (isLocal) {
 }
 
 async function initSchema() {
-  // Check if old schema (without households) needs migration
-  const hasHouseholds = await db.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='households'"
-  );
-  const hasPeople = await db.execute(
-    "SELECT name FROM sqlite_master WHERE type='table' AND name='people'"
-  );
-
-  if (hasHouseholds.rows.length === 0 && hasPeople.rows.length > 0) {
-    // Old schema — drop and recreate clean
-    await db.execute('DROP TABLE IF EXISTS entries');
-    await db.execute('DROP TABLE IF EXISTS section_members');
-    await db.execute('DROP TABLE IF EXISTS sections');
-    await db.execute('DROP TABLE IF EXISTS people');
-  }
-
+  // ─────────── Create tables ───────────
   await db.execute(`
     CREATE TABLE IF NOT EXISTS households (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +38,7 @@ async function initSchema() {
       household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       color TEXT NOT NULL,
+      password_hash TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(household_id, name)
     )
@@ -90,6 +76,19 @@ async function initSchema() {
     )
   `);
 
+  // ─────────── Migration: add password_hash if missing ───────────
+  try {
+    await db.execute("SELECT password_hash FROM people LIMIT 1");
+  } catch {
+    try {
+      await db.execute("ALTER TABLE people ADD COLUMN password_hash TEXT");
+      console.log('📦 Added password_hash column to people (migration)');
+    } catch (e) {
+      // Column already exists or table issues — ignore
+    }
+  }
+
+  // ─────────── Indexes ───────────
   try { await db.execute('CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date)'); } catch {}
   try { await db.execute('CREATE INDEX IF NOT EXISTS idx_entries_section ON entries(section_id)'); } catch {}
   try { await db.execute('CREATE INDEX IF NOT EXISTS idx_households_token ON households(session_token)'); } catch {}

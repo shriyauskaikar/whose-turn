@@ -52,8 +52,8 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const doSignup = useCallback(async (householdName, password, personName, personColor) => {
-    const data = await apiSignup(householdName, password, personName, personColor);
+  const doSignup = useCallback(async (householdName, password, personName, personColor, personPassword) => {
+    const data = await apiSignup(householdName, password, personName, personColor, personPassword);
     localStorage.setItem(TOKEN_KEY, data.token);
     setToken(data.token);
     setHousehold(data.household);

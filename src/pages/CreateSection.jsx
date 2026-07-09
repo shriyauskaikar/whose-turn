@@ -15,6 +15,7 @@ export default function CreateSection() {
   const [showAddPerson, setShowAddPerson] = useState(false);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(null);
+  const [newPin, setNewPin] = useState('');
 
   useEffect(() => {
     Promise.all([getPeople(), getColors()])
@@ -55,7 +56,7 @@ export default function CreateSection() {
     e.preventDefault();
     if (!newName.trim()) return;
     try {
-      const p = await createPerson(newName.trim(), newColor);
+      const p = await createPerson(newName.trim(), newColor, newPin || undefined);
       setAllPeople(prev => [...prev, p]);
       setSelectedIds(prev => [...prev, p.id]);
       setShowAddPerson(false);
@@ -192,6 +193,14 @@ export default function CreateSection() {
                       </button>
                     ))}
                   </div>
+                  <input
+                    type="password"
+                    value={newPin}
+                    onChange={e => setNewPin(e.target.value)}
+                    placeholder="Profile PIN (optional)"
+                    className="w-full px-3 py-2 rounded-lg border text-sm mb-2 focus:outline-none"
+                    style={{ borderColor: '#D4C9B8' }}
+                  />
                   <div className="flex gap-2">
                     <button
                       type="button"

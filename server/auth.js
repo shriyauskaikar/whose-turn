@@ -9,12 +9,23 @@ export function authMiddleware(req, res, next) {
   next();
 }
 
+// People included in responses — adds has_password boolean
+function formatPeople(rows) {
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    color: r.color,
+    created_at: r.created_at,
+    has_password: !!r.password_hash,
+  }));
+}
+
 // ───────────── Auth Routes ─────────────
 export function authRoutes(router) {
   // POST /api/auth/signup — create a household + first person
   router.post('/auth/signup', async (req, res) => {
     const db = req.db;
-    const { household_name, password, person_name, person_color } = req.body;
+    const { household_name, password, person_name, person_color, person_password } = req.body;
 
     if (!household_name || !password || !person_name || !person_color) {
       return res.status(400).json({
@@ -23,11 +34,12 @@ export function authRoutes(router) {
     }
 
     if (password.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+      return res.status(400).json({ error: 'Household password must be at least 4 characters' });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
     const session_token = crypto.randomUUID();
+    const person_password_hash = person_password ? await bcrypt.hash(person_password, 10) : null;
 
     try {
       const tx = await db.transaction('write');
@@ -39,8 +51,8 @@ export function authRoutes(router) {
       const householdId = hhResult.lastInsertRowid;
 
       await tx.execute({
-        sql: 'INSERT INTO people (household_id, name, color) VALUES (?, ?, ?)',
-        args: [householdId, person_name, person_color],
+        sql: 'INSERT INTO people (household_id, name, color, password_hash) VALUES (?, ?, ?, ?)',
+        args: [householdId, person_name, person_color, person_password_hash],
       });
 
       await tx.commit();
@@ -50,10 +62,10 @@ export function authRoutes(router) {
         args: [householdId],
       })).rows[0];
 
-      const people = (await db.execute({
-        sql: 'SELECT id, name, color, created_at FROM people WHERE household_id = ? ORDER BY name',
+      const people = formatPeople((await db.execute({
+        sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE household_id = ? ORDER BY name',
         args: [householdId],
-      })).rows;
+      })).rows);
 
       res.status(201).json({ token: session_token, household, people });
     } catch (err) {
@@ -64,7 +76,7 @@ export function authRoutes(router) {
     }
   });
 
-  // POST /api/auth/login — verify password, return session
+  // POST /api/auth/login — verify household password, return session + people
   router.post('/auth/login', async (req, res) => {
     const db = req.db;
     const { household_name, password } = req.body;
@@ -95,10 +107,10 @@ export function authRoutes(router) {
       args: [session_token, household.id],
     });
 
-    const people = (await db.execute({
-      sql: 'SELECT id, name, color, created_at FROM people WHERE household_id = ? ORDER BY name',
+    const people = formatPeople((await db.execute({
+      sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE household_id = ? ORDER BY name',
       args: [household.id],
-    })).rows;
+    })).rows);
 
     res.json({
       token: session_token,
@@ -107,18 +119,98 @@ export function authRoutes(router) {
     });
   });
 
-  // GET /api/auth/me — validate token, return household + people
+  // GET /api/auth/me — validate token, return household + people (with has_password)
   router.get('/auth/me', async (req, res) => {
     if (!req.household) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    const people = (await req.db.execute({
-      sql: 'SELECT id, name, color, created_at FROM people WHERE household_id = ? ORDER BY name',
+    const people = formatPeople((await req.db.execute({
+      sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE household_id = ? ORDER BY name',
       args: [req.household.id],
-    })).rows;
+    })).rows);
 
     res.json({ household: req.household, people });
+  });
+
+  // POST /api/auth/verify-person — verify a person's password
+  router.post('/auth/verify-person', authMiddleware, async (req, res) => {
+    const db = req.db;
+    const { person_id, password } = req.body;
+
+    if (!person_id) {
+      return res.status(400).json({ error: 'person_id is required' });
+    }
+
+    const person = (await db.execute({
+      sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE id = ? AND household_id = ?',
+      args: [person_id, req.household.id],
+    })).rows[0];
+
+    if (!person) {
+      return res.status(404).json({ error: 'Person not found' });
+    }
+
+    // If person has no password, let them through
+    if (!person.password_hash) {
+      return res.json({
+        verified: true,
+        person: { id: person.id, name: person.name, color: person.color, created_at: person.created_at },
+      });
+    }
+
+    if (!password) {
+      return res.status(403).json({ error: 'Person password required' });
+    }
+
+    const valid = await bcrypt.compare(password, person.password_hash);
+    if (!valid) {
+      return res.status(403).json({ error: 'Wrong person password' });
+    }
+
+    res.json({
+      verified: true,
+      person: { id: person.id, name: person.name, color: person.color, created_at: person.created_at },
+    });
+  });
+
+  // POST /api/auth/set-person-password — set/change a person's password
+  router.post('/auth/set-person-password', authMiddleware, async (req, res) => {
+    const db = req.db;
+    const { person_id, password } = req.body;
+
+    if (!person_id) {
+      return res.status(400).json({ error: 'person_id is required' });
+    }
+
+    // Verify this person belongs to the household
+    const person = (await db.execute({
+      sql: 'SELECT id FROM people WHERE id = ? AND household_id = ?',
+      args: [person_id, req.household.id],
+    })).rows[0];
+
+    if (!person) {
+      return res.status(404).json({ error: 'Person not found' });
+    }
+
+    if (password) {
+      if (password.length < 4) {
+        return res.status(400).json({ error: 'Password must be at least 4 characters' });
+      }
+      const hash = await bcrypt.hash(password, 10);
+      await db.execute({
+        sql: 'UPDATE people SET password_hash = ? WHERE id = ?',
+        args: [hash, person_id],
+      });
+    } else {
+      // Remove password
+      await db.execute({
+        sql: 'UPDATE people SET password_hash = NULL WHERE id = ?',
+        args: [person_id],
+      });
+    }
+
+    res.json({ ok: true });
   });
 
   // POST /api/auth/logout — clear session token
