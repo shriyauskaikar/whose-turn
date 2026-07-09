@@ -59,7 +59,7 @@ export default function Stats() {
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#F5F0E8' }}>
       {/* Header */}
       <div className="px-4 pt-6 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate('/dashboard')} className="p-1" style={{ color: '#1E4A4A' }}>
+        <button onClick={() => navigate(-1)} className="p-1" style={{ color: '#1E4A4A' }}>
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>

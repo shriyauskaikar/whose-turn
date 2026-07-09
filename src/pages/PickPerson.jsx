@@ -79,13 +79,20 @@ export default function PickPerson() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#F5F0E8' }}>
       <div className="w-full max-w-md">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
-            Who are you?
-          </h1>
-          <p className="text-sm" style={{ color: '#8B7D6B' }}>
-            Household: {household.name}
-          </p>
+        <div className="flex items-center gap-3 mb-6">
+          <button onClick={() => navigate(-1)} className="p-1 shrink-0" style={{ color: '#1E4A4A' }}>
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+              Who are you?
+            </h1>
+            <p className="text-sm" style={{ color: '#8B7D6B' }}>
+              {household.name}
+            </p>
+          </div>
         </div>
 
         {/* Existing profiles */}
