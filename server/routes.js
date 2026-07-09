@@ -19,10 +19,10 @@ export const COLOR_PALETTE = [
 export function peopleRoutes(router) {
   router.get('/', async (req, res) => {
     const result = await req.db.execute({
-      sql: 'SELECT id, name, color, created_at FROM people WHERE household_id = ? ORDER BY name',
+      sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE household_id = ? ORDER BY name',
       args: [req.household.id],
     });
-    res.json(result.rows);
+    res.json(result.rows.map(r => ({ ...r, has_password: !!r.password_hash, password_hash: undefined })));
   });
 
   router.post('/', async (req, res) => {

@@ -1,30 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { getPeople, getColors, createSection, createPerson } from '../lib/api';
+import { getPeople, createSection } from '../lib/api';
 
 export default function CreateSection() {
   const { person } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [allPeople, setAllPeople] = useState([]);
-  const [colors, setColors] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showAddPerson, setShowAddPerson] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState(null);
-  const [newPin, setNewPin] = useState('');
 
   useEffect(() => {
-    Promise.all([getPeople(), getColors()])
-      .then(([peopleData, colorsData]) => {
-        setAllPeople(peopleData);
-        setColors(colorsData);
-        const avail = colorsData.find(c => c.available);
-        if (avail) setNewColor(avail.hex);
-      })
+    getPeople()
+      .then(setAllPeople)
       .catch(console.error);
   }, []);
 
@@ -49,25 +39,6 @@ export default function CreateSection() {
       setError(err.message);
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function handleAddPerson(e) {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    try {
-      const p = await createPerson(newName.trim(), newColor, newPin || undefined);
-      setAllPeople(prev => [...prev, p]);
-      setSelectedIds(prev => [...prev, p.id]);
-      setShowAddPerson(false);
-      setNewName('');
-      // Refresh colors
-      const colorsData = await getColors();
-      setColors(colorsData);
-      const avail = colorsData.find(c => c.available);
-      if (avail) setNewColor(avail.hex);
-    } catch (err) {
-      setError(err.message);
     }
   }
 
@@ -152,77 +123,20 @@ export default function CreateSection() {
                   </button>
                 );
               })}
-
-              {/* Add person inline */}
-              {!showAddPerson ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAddPerson(true)}
-                  className="w-full py-2.5 rounded-xl border-2 border-dashed text-sm font-medium transition-all"
-                  style={{
-                    borderColor: '#C8BBA8',
-                    color: '#6B5E4A',
-                    backgroundColor: 'rgba(255,255,255,0.3)',
-                  }}
-                >
-                  + Add someone new
-                </button>
-              ) : (
-                <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Name"
-                    className="w-full px-3 py-2 rounded-lg border text-sm mb-2 focus:outline-none"
-                    style={{ borderColor: '#D4C9B8' }}
-                  />
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {colors.filter(c => c.available || c.hex === newColor).map((c) => (
-                      <button
-                        key={c.hex}
-                        type="button"
-                        disabled={!c.available}
-                        onClick={() => setNewColor(c.hex)}
-                        className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
-                          newColor === c.hex ? 'ring-2 ring-offset-1 ring-amber-500 scale-110' : ''
-                        } ${!c.available ? 'opacity-30' : ''}`}
-                        style={{ backgroundColor: c.hex, color: 'white' }}
-                      >
-                        {!c.available ? '✕' : ''}
-                      </button>
-                    ))}
-                  </div>
-                  <input
-                    type="password"
-                    value={newPin}
-                    onChange={e => setNewPin(e.target.value)}
-                    placeholder="Profile PIN (optional)"
-                    className="w-full px-3 py-2 rounded-lg border text-sm mb-2 focus:outline-none"
-                    style={{ borderColor: '#D4C9B8' }}
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAddPerson}
-                      disabled={!newName.trim()}
-                      className="flex-1 py-1.5 rounded-lg text-white text-sm font-medium disabled:opacity-40"
-                      style={{ backgroundColor: '#1E4A4A' }}
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddPerson(false)}
-                      className="px-3 py-1.5 rounded-lg text-sm"
-                      style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => navigate('/manage-people')}
+              className="w-full mt-3 py-2 rounded-xl border-2 border-dashed text-sm font-medium transition-all"
+              style={{
+                borderColor: '#C8BBA8',
+                color: '#6B5E4A',
+                backgroundColor: 'rgba(255,255,255,0.3)',
+              }}
+            >
+              + Manage profiles to add someone new
+            </button>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

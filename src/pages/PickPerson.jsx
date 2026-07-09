@@ -1,46 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { getColors, createPerson, verifyPerson } from '../lib/api';
+import { verifyPerson } from '../lib/api';
 
 export default function PickPerson() {
-  const { household, people, selectPerson, addPersonLocally, logout } = useAuth();
+  const { household, people, selectPerson, logout } = useAuth();
   const navigate = useNavigate();
-  const [colors, setColors] = useState([]);
-  const [showAdd, setShowAdd] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState(null);
-  const [newPin, setNewPin] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  // PIN unlock state
   const [unlockingPerson, setUnlockingPerson] = useState(null);
   const [pinValue, setPinValue] = useState('');
   const [pinError, setPinError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    getColors()
-      .then(setColors)
-      .catch(console.error);
-  }, []);
+  if (!household) return <Navigate to="/" replace />;
 
-  useEffect(() => {
-    if (colors.length > 0 && !newColor) {
-      const avail = colors.find(c => c.available);
-      if (avail) setNewColor(avail.hex);
-    }
-  }, [colors]);
-
-  if (!household) {
-    navigate('/');
-    return null;
-  }
-
-  // ─── Handle selecting a person ───
   function handleSelect(p) {
     if (p.has_password) {
-      // Requires PIN — show unlock dialog
       setUnlockingPerson(p);
       setPinValue('');
       setPinError('');
@@ -66,23 +40,6 @@ export default function PickPerson() {
     }
   }
 
-  // ─── Handle adding a new person ───
-  async function handleAdd(e) {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    setBusy(true);
-    try {
-      const p = await createPerson(newName.trim(), newColor, newPin || undefined);
-      addPersonLocally(p);
-      selectPerson(p);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#F5F0E8' }}>
       <div className="w-full max-w-md">
@@ -95,8 +52,7 @@ export default function PickPerson() {
           </p>
         </div>
 
-        {/* People list */}
-        {people.length > 0 && (
+        {people.length > 0 ? (
           <div className="space-y-2 mb-6">
             {people.map((p) => (
               <button
@@ -115,6 +71,10 @@ export default function PickPerson() {
               </button>
             ))}
           </div>
+        ) : (
+          <p className="text-center py-4" style={{ color: '#8B7D6B' }}>
+            No profiles yet. Ask the household admin to add you.
+          </p>
         )}
 
         {/* PIN unlock modal */}
@@ -161,82 +121,6 @@ export default function PickPerson() {
               </div>
             </form>
           </div>
-        )}
-
-        {/* Add new person */}
-        {!showAdd ? (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="w-full py-3 rounded-xl border-2 border-dashed text-base font-medium transition-all"
-            style={{ borderColor: '#C8BBA8', color: '#6B5E4A', backgroundColor: 'rgba(255,255,255,0.4)' }}
-          >
-            + I'm new — add me
-          </button>
-        ) : (
-          <form onSubmit={handleAdd} className="space-y-4 p-4 rounded-2xl border border-amber-200/40" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Your name"
-              className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none"
-              style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }}
-              autoFocus
-            />
-
-            <div className="flex flex-wrap gap-2">
-              {colors.map((c) => (
-                <button
-                  key={c.hex}
-                  type="button"
-                  disabled={!c.available}
-                  onClick={() => setNewColor(c.hex)}
-                  className={`w-8 h-8 rounded-full transition-all ${
-                    newColor === c.hex ? 'ring-2 ring-offset-2 ring-amber-500 scale-110' : 'hover:scale-110'
-                  } ${!c.available ? 'opacity-30 cursor-not-allowed' : ''}`}
-                  style={{ backgroundColor: c.hex }}
-                  title={c.available ? c.name : `${c.name} (taken)`}
-                >
-                  {!c.available && <span className="flex items-center justify-center text-white text-xs font-bold">✕</span>}
-                </button>
-              ))}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>
-                Profile PIN <span className="text-xs font-normal" style={{ color: '#A89B88' }}>(optional)</span>
-              </label>
-              <input
-                type="password"
-                value={newPin}
-                onChange={e => setNewPin(e.target.value)}
-                placeholder="At least 4 characters"
-                className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none"
-                style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }}
-              />
-            </div>
-
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy || !newName.trim()}
-                className="flex-1 py-2.5 rounded-lg text-white font-medium disabled:opacity-40"
-                style={{ backgroundColor: '#1E4A4A' }}
-              >
-                {busy ? '...' : 'Add me!'}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowAdd(false); setError(''); }}
-                className="px-4 py-2.5 rounded-lg text-sm font-medium"
-                style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}
-              >
-                Back
-              </button>
-            </div>
-          </form>
         )}
 
         <button

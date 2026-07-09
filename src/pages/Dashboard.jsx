@@ -171,7 +171,7 @@ function SectionCard({ section, person, onRefresh }) {
 }
 
 export default function Dashboard() {
-  const { person, household, logout } = useAuth();
+  const { person, household } = useAuth();
   const navigate = useNavigate();
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -228,10 +228,10 @@ export default function Dashboard() {
             Stats
           </button>
           <button
-            onClick={logout}
+            onClick={() => navigate('/manage-people')}
             className="px-2 py-1.5 rounded-lg text-xs transition-all"
             style={{ color: '#A89B88' }}
-            title="Switch household or person"
+            title="Manage profiles &amp; settings"
           >
             ⚙️
           </button>
