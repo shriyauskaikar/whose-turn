@@ -51,6 +51,56 @@ export function peopleRoutes(router) {
       throw err;
     }
   });
+
+  // DELETE /api/people/:id — remove a person from the household
+  router.delete('/:id', async (req, res) => {
+    const db = req.db;
+    const personId = req.params.id;
+
+    // Can't delete yourself (prevents orphan sessions)
+    const currentPerson = (await db.execute({
+      sql: 'SELECT id FROM people WHERE id = ? AND household_id = ?',
+      args: [personId, req.household.id],
+    })).rows[0];
+
+    if (!currentPerson) return res.status(404).json({ error: 'Person not found' });
+
+    await db.execute({ sql: 'DELETE FROM entries WHERE person_id = ? AND household_id = ?', args: [personId, req.household.id] });
+    await db.execute({ sql: 'DELETE FROM section_members WHERE person_id = ? AND household_id = ?', args: [personId, req.household.id] });
+    await db.execute({ sql: 'DELETE FROM people WHERE id = ? AND household_id = ?', args: [personId, req.household.id] });
+
+    res.json({ ok: true });
+  });
+
+  // PUT /api/people/:id — update person's name/color
+  router.put('/:id', async (req, res) => {
+    const db = req.db;
+    const personId = req.params.id;
+    const { name, color } = req.body;
+
+    // Verify person belongs to household
+    const person = (await db.execute({
+      sql: 'SELECT id FROM people WHERE id = ? AND household_id = ?',
+      args: [personId, req.household.id],
+    })).rows[0];
+
+    if (!person) return res.status(404).json({ error: 'Person not found' });
+
+    if (name && color) {
+      await db.execute({ sql: 'UPDATE people SET name = ?, color = ? WHERE id = ?', args: [name, color, personId] });
+    } else if (name) {
+      await db.execute({ sql: 'UPDATE people SET name = ? WHERE id = ?', args: [name, personId] });
+    } else if (color) {
+      await db.execute({ sql: 'UPDATE people SET color = ? WHERE id = ?', args: [color, personId] });
+    }
+
+    const updated = (await db.execute({
+      sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE id = ?',
+      args: [personId],
+    })).rows[0];
+
+    res.json({ ...updated, has_password: !!updated.password_hash, password_hash: undefined });
+  });
 }
 
 // ───────────── Sections routes ─────────────

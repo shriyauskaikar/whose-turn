@@ -219,6 +219,76 @@ export function authRoutes(router) {
     res.json({ ok: true });
   });
 
+  // POST /api/auth/change-password — change household password (requires current password)
+  router.post('/auth/change-password', authMiddleware, async (req, res) => {
+    const db = req.db;
+    const { current_password, new_password } = req.body;
+
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'current_password and new_password are required' });
+    }
+
+    if (new_password.length < 4) {
+      return res.status(400).json({ error: 'New password must be at least 4 characters' });
+    }
+
+    const result = await db.execute({
+      sql: 'SELECT password_hash FROM households WHERE id = ?',
+      args: [req.household.id],
+    });
+
+    const valid = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!valid) {
+      return res.status(403).json({ error: 'Current password is wrong' });
+    }
+
+    const new_hash = await bcrypt.hash(new_password, 10);
+    await db.execute({
+      sql: 'UPDATE households SET password_hash = ? WHERE id = ?',
+      args: [new_hash, req.household.id],
+    });
+
+    res.json({ ok: true });
+  });
+
+  // POST /api/auth/change-name — rename household
+  router.post('/auth/change-name', authMiddleware, async (req, res) => {
+    const db = req.db;
+    const { name } = req.body;
+
+    if (!name?.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    try {
+      await db.execute({
+        sql: 'UPDATE households SET name = ? WHERE id = ?',
+        args: [name.trim(), req.household.id],
+      });
+      req.household.name = name.trim();
+      res.json({ household: req.household });
+    } catch (err) {
+      if (err.message?.includes('UNIQUE')) {
+        return res.status(409).json({ error: 'A household with that name already exists' });
+      }
+      throw err;
+    }
+  });
+
+  // DELETE /api/auth/household — delete entire household and all data
+  router.delete('/auth/household', authMiddleware, async (req, res) => {
+    const db = req.db;
+    const hid = req.household.id;
+
+    await db.execute({ sql: 'DELETE FROM entries WHERE household_id = ?', args: [hid] });
+    await db.execute({ sql: 'DELETE FROM section_members WHERE household_id = ?', args: [hid] });
+    await db.execute({ sql: 'DELETE FROM sections WHERE household_id = ?', args: [hid] });
+    await db.execute({ sql: 'DELETE FROM people WHERE household_id = ?', args: [hid] });
+    await db.execute({ sql: 'DELETE FROM households WHERE id = ?', args: [hid] });
+
+    res.json({ ok: true });
+  });
+
   // POST /api/auth/logout — clear session token
   router.post('/auth/logout', async (req, res) => {
     if (req.household) {

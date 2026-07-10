@@ -69,6 +69,35 @@ export function setPersonPassword(person_id, password) {
   });
 }
 
+export function changeHouseholdPassword(current_password, new_password) {
+  return request('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password, new_password }),
+  });
+}
+
+export function changeHouseholdName(name) {
+  return request('/auth/change-name', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteHousehold() {
+  return request('/auth/household', { method: 'DELETE' });
+}
+
+export function deletePerson(personId) {
+  return request(`/people/${personId}`, { method: 'DELETE' });
+}
+
+export function updatePerson(personId, data) {
+  return request(`/people/${personId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 // ─────────── Colors ───────────
 export function getColors() {
   return request('/colors');
