@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { getSections, createEntry, deleteEntry, getEntries } from '../lib/api';
+import Confetti from '../lib/Confetti';
 
 function todayStr() {
   const d = new Date();
@@ -21,11 +22,11 @@ function last7Days() {
 function DayDot({ dateStr, entry, dayLabel }) {
   return (
     <div className="flex flex-col items-center gap-0.5" title={dateStr}>
-      <span className="text-[10px]" style={{ color: '#8B7D6B' }}>{dayLabel}</span>
+      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{dayLabel}</span>
       <div
         className="w-5 h-5 rounded-full"
         style={{
-          backgroundColor: entry ? entry.person_color : '#E0D8CC',
+          backgroundColor: entry ? entry.person_color : 'var(--bar-bg)',
           opacity: entry ? 1 : 0.5,
         }}
       />
@@ -37,6 +38,7 @@ function SectionCard({ section, person, onRefresh }) {
   const [miniHistory, setMiniHistory] = useState({});
   const [todaysEntry, setTodaysEntry] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [confetti, setConfetti] = useState(false);
   const navigate = useNavigate();
   const today = todayStr();
 
@@ -64,6 +66,8 @@ function SectionCard({ section, person, onRefresh }) {
     setBusy(true);
     try {
       await createEntry(section.id, person.id, today);
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 4000);
       await loadHistory();
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -95,7 +99,7 @@ function SectionCard({ section, person, onRefresh }) {
   return (
     <div
       className="rounded-2xl p-5 shadow-sm border border-amber-200/40"
-      style={{ backgroundColor: 'rgba(255, 255, 255, 0.7)' }}
+      style={{ backgroundColor: 'var(--card)' }}
     >
       {/* Section name + tap to detail */}
       <button
@@ -104,7 +108,7 @@ function SectionCard({ section, person, onRefresh }) {
       >
         <h2
           className="text-xl font-semibold mb-3"
-          style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}
+          style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}
         >
           {section.name}
         </h2>
@@ -119,7 +123,7 @@ function SectionCard({ section, person, onRefresh }) {
 
       {/* Today's status per member */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <span className="text-xs font-medium" style={{ color: '#8B7D6B' }}>Today:</span>
+        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Today:</span>
         {section.members.map((m) => {
           const hasEntry = miniHistory[today]?.person_id === m.id;
           return (
@@ -128,7 +132,7 @@ function SectionCard({ section, person, onRefresh }) {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
               style={{
                 backgroundColor: hasEntry ? `${m.color}20` : 'rgba(0,0,0,0.04)',
-                color: hasEntry ? m.color : '#8B7D6B',
+                color: hasEntry ? m.color : 'var(--text-muted)',
               }}
             >
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />
@@ -139,6 +143,18 @@ function SectionCard({ section, person, onRefresh }) {
         })}
       </div>
 
+      {/* Streaks */}
+      {section.streaks?.filter(s => s.streak > 0).length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>🔥 Streaks:</span>
+          {section.streaks.filter(s => s.streak > 0).map(s => (
+            <span key={s.person_id} className="text-[10px] font-medium" style={{ color: s.color }}>
+              {s.name}: {s.streak} day{s.streak > 1 ? 's' : ''}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* I Did It / Undo button */}
       {todaysEntry && todaysEntry.person_id === person.id ? (
         <button
@@ -146,8 +162,8 @@ function SectionCard({ section, person, onRefresh }) {
           disabled={busy}
           className="w-full py-3 rounded-xl text-sm font-medium transition-all border disabled:opacity-50"
           style={{
-            borderColor: '#D4C9B8',
-            color: '#8B7D6B',
+            borderColor: 'var(--border)',
+            color: 'var(--text-muted)',
             fontFamily: "'Inter', sans-serif",
           }}
         >
@@ -159,13 +175,15 @@ function SectionCard({ section, person, onRefresh }) {
           disabled={busy}
           className="w-full py-3 rounded-xl text-white font-semibold text-base transition-all shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50"
           style={{
-            backgroundColor: '#D97706',
+            backgroundColor: 'var(--accent)',
             fontFamily: "'Inter', sans-serif",
           }}
         >
           {busy ? '...' : '✅ I did this today!'}
         </button>
       )}
+
+      <Confetti active={confetti} />
     </div>
   );
 }
@@ -200,18 +218,18 @@ export default function Dashboard() {
   return (
     <div
       className="min-h-screen pb-24"
-      style={{ backgroundColor: '#F5F0E8' }}
+      style={{ backgroundColor: 'var(--bg)' }}
     >
       {/* Header */}
       <div className="px-4 pt-6 pb-2 flex items-center justify-between">
         <div>
           <h1
             className="text-2xl font-bold"
-            style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}
+            style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}
           >
             Whose Turn
           </h1>
-          <p className="text-sm" style={{ color: '#8B7D6B' }}>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {household?.name} · Hey, {person.name}!
           </p>
         </div>
@@ -220,8 +238,8 @@ export default function Dashboard() {
             onClick={() => navigate('/stats')}
             className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
             style={{
-              backgroundColor: 'rgba(255,255,255,0.7)',
-              color: '#1E4A4A',
+              backgroundColor: 'var(--card)',
+              color: 'var(--heading)',
               border: '1px solid rgba(30,74,74,0.15)',
             }}
           >
@@ -230,7 +248,7 @@ export default function Dashboard() {
           <button
             onClick={() => navigate('/settings')}
             className="px-3 py-1.5 rounded-lg text-xs transition-all"
-            style={{ color: '#A89B88', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(30,74,74,0.15)' }}
+            style={{ color: 'var(--text-light)', backgroundColor: 'var(--card)', border: '1px solid rgba(30,74,74,0.15)' }}
             title="Settings, members & logout"
           >
             ⚙️ Settings
@@ -241,19 +259,19 @@ export default function Dashboard() {
       {/* Sections list */}
       <div className="px-4 pt-4 space-y-4">
         {loading ? (
-          <p className="text-center" style={{ color: '#A89B88' }}>Loading...</p>
+          <p className="text-center" style={{ color: 'var(--text-light)' }}>Loading...</p>
         ) : sections.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-lg mb-2" style={{ color: '#8B7D6A', fontFamily: "'Fraunces', Georgia, serif" }}>
               No sections yet!
             </p>
-            <p className="text-sm mb-6" style={{ color: '#A89B88' }}>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-light)' }}>
               Create your first chore to start tracking.
             </p>
             <button
               onClick={() => navigate('/section/new')}
               className="px-6 py-3 rounded-xl text-white font-semibold text-base shadow-sm"
-              style={{ backgroundColor: '#1E4A4A' }}
+              style={{ backgroundColor: 'var(--heading)' }}
             >
               + Create a Section
             </button>
@@ -270,7 +288,7 @@ export default function Dashboard() {
         <button
           onClick={() => navigate('/section/new')}
           className="fixed bottom-20 right-4 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center text-2xl transition-all active:scale-90"
-          style={{ backgroundColor: '#D97706' }}
+          style={{ backgroundColor: 'var(--accent)' }}
           title="New section"
         >
           +
@@ -281,15 +299,15 @@ export default function Dashboard() {
       <nav
         className="fixed bottom-0 left-0 right-0 flex justify-around py-3 px-4 border-t"
         style={{
-          backgroundColor: 'rgba(245, 240, 232, 0.95)',
-          borderColor: '#D4C9B8',
+          backgroundColor: 'var(--nav-bg)',
+          borderColor: 'var(--border)',
           backdropFilter: 'blur(8px)',
         }}
       >
         <button
           onClick={() => navigate('/dashboard')}
           className="flex flex-col items-center gap-0.5 text-xs font-medium"
-          style={{ color: '#1E4A4A' }}
+          style={{ color: 'var(--heading)' }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -299,7 +317,7 @@ export default function Dashboard() {
         <button
           onClick={() => navigate('/section/new')}
           className="flex flex-col items-center gap-0.5 text-xs font-medium"
-          style={{ color: '#8B7D6B' }}
+          style={{ color: 'var(--text-muted)' }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -309,7 +327,7 @@ export default function Dashboard() {
         <button
           onClick={() => navigate('/stats')}
           className="flex flex-col items-center gap-0.5 text-xs font-medium"
-          style={{ color: '#8B7D6B' }}
+          style={{ color: 'var(--text-muted)' }}
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

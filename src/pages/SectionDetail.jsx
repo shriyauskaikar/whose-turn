@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { getSection, createEntry, deleteEntry, updateSection, deleteSection, getPeople } from '../lib/api';
+import Confetti from '../lib/Confetti';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -24,6 +25,7 @@ export default function SectionDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [confetti, setConfetti] = useState(false);
 
   // Edit/delete state
   const [showMenu, setShowMenu] = useState(false);
@@ -153,6 +155,7 @@ export default function SectionDetail() {
       setBusy(true);
       try {
         await createEntry(section.id, person.id, dateStr);
+        if (dateStr === todayStrVal) { setConfetti(true); setTimeout(() => setConfetti(false), 4000); }
         await loadSection();
         setMessage('✅ Logged!');
         setTimeout(() => setMessage(''), 2000);
@@ -201,21 +204,21 @@ export default function SectionDetail() {
   if (!person) { navigate('/'); return null; }
 
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: '#F5F0E8' }}>
+    <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Header */}
       <div className="px-4 pt-6 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1" style={{ color: '#1E4A4A' }}>
+        <button onClick={() => navigate(-1)} className="p-1" style={{ color: 'var(--heading)' }}>
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold flex-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+        <h1 className="text-2xl font-bold flex-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
           {section?.name || 'Section'}
         </h1>
 
         {/* Menu button */}
         <div className="relative">
-          <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-lg hover:bg-amber-50 transition-all" style={{ color: '#6B5E4A' }}>
+          <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-lg hover:bg-amber-50 transition-all" style={{ color: 'var(--text-secondary)' }}>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
             </svg>
@@ -224,11 +227,11 @@ export default function SectionDetail() {
           {showMenu && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-              <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border shadow-lg overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#D4C9B8' }}>
-                <button onClick={() => { setShowMenu(false); setShowEditModal(true); openEditModal(); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-amber-50 transition-all" style={{ color: '#2D2A24' }}>
+              <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border shadow-lg overflow-hidden" style={{ backgroundColor: 'white', borderColor: 'var(--border)' }}>
+                <button onClick={() => { setShowMenu(false); setShowEditModal(true); openEditModal(); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-amber-50 transition-all" style={{ color: 'var(--text)' }}>
                   ✏️ Edit section
                 </button>
-                <button onClick={() => { setShowMenu(false); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-red-50 transition-all" style={{ color: '#DC2626' }}>
+                <button onClick={() => { setShowMenu(false); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-red-50 transition-all" style={{ color: 'var(--danger)' }}>
                   🗑️ Delete section
                 </button>
               </div>
@@ -240,7 +243,7 @@ export default function SectionDetail() {
       {/* Toast message */}
       {message && (
         <div className="px-4 pb-2">
-          <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: '#1E4A4A', color: 'white' }}>
+          <div className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--heading)', color: 'white' }}>
             {message}
           </div>
         </div>
@@ -249,7 +252,7 @@ export default function SectionDetail() {
       {/* Members row */}
       {section && (
         <div className="px-4 py-2 flex flex-wrap gap-2 items-center">
-          <span className="text-xs font-medium" style={{ color: '#8B7D6B' }}>Members:</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Members:</span>
           {section.members.map((m) => (
             <div
               key={m.id}
@@ -263,29 +266,41 @@ export default function SectionDetail() {
         </div>
       )}
 
+      {/* Streaks */}
+      {section?.streaks?.filter(s => s.streak > 0).length > 0 && (
+        <div className="px-4 py-1 flex flex-wrap gap-x-4 gap-y-1 items-center">
+          <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>🔥 Streaks:</span>
+          {section.streaks.filter(s => s.streak > 0).map(s => (
+            <span key={s.person_id} className="text-[10px] font-medium" style={{ color: s.color }}>
+              {s.name}: {s.streak} day{s.streak > 1 ? 's' : ''}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* ─────── Proper Month Calendar ─────── */}
       <div className="px-4 pt-4">
-        <div className="rounded-2xl p-4 border border-amber-200/40" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
+        <div className="rounded-2xl p-4 border border-amber-200/40" style={{ backgroundColor: 'var(--card)' }}>
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={goPrevMonth}
               className="p-2 rounded-lg hover:bg-amber-50 transition-all"
-              style={{ color: '#1E4A4A' }}
+              style={{ color: 'var(--heading)' }}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            <h2 className="text-base font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+            <h2 className="text-base font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
               {MONTHS[viewMonth - 1]} {viewYear}
             </h2>
 
             <button
               onClick={goNextMonth}
               className="p-2 rounded-lg hover:bg-amber-50 transition-all"
-              style={{ color: '#1E4A4A' }}
+              style={{ color: 'var(--heading)' }}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -298,7 +313,7 @@ export default function SectionDetail() {
             <button
               onClick={goToday}
               className="mb-3 px-3 py-1 rounded-lg text-xs font-medium"
-              style={{ backgroundColor: '#1E4A4A', color: 'white' }}
+              style={{ backgroundColor: 'var(--heading)', color: 'white' }}
             >
               Today
             </button>
@@ -307,7 +322,7 @@ export default function SectionDetail() {
           {/* Weekday headers */}
           <div className="grid grid-cols-7 mb-1">
             {WEEKDAYS.map((label) => (
-              <div key={label} className="text-center text-[10px] font-medium py-1" style={{ color: '#8B7D6B' }}>
+              <div key={label} className="text-center text-[10px] font-medium py-1" style={{ color: 'var(--text-muted)' }}>
                 {label}
               </div>
             ))}
@@ -315,7 +330,7 @@ export default function SectionDetail() {
 
           {/* Loading state */}
           {loading ? (
-            <div className="py-8 text-center text-sm" style={{ color: '#A89B88' }}>Loading...</div>
+            <div className="py-8 text-center text-sm" style={{ color: 'var(--text-light)' }}>Loading...</div>
           ) : (
             <>
               {/* Calendar grid */}
@@ -339,7 +354,7 @@ export default function SectionDetail() {
                         <span
                           className={`text-xs leading-none ${isToday ? 'font-bold' : ''}`}
                           style={{
-                            color: isFuture ? '#D4C9B8' : isToday ? '#D97706' : '#4A3F32',
+                            color: isFuture ? 'var(--border)' : isToday ? 'var(--accent)' : 'var(--text-secondary)',
                           }}
                         >
                           {day}
@@ -352,7 +367,7 @@ export default function SectionDetail() {
                               title={`${entry.person_name}`}
                             />
                           ) : isToday ? (
-                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#D97706' }} />
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--accent)' }} />
                           ) : (
                             <div className="w-2.5 h-2.5" />
                           )}
@@ -364,18 +379,18 @@ export default function SectionDetail() {
               ))}
 
               {/* Legend */}
-              <div className="flex flex-wrap gap-3 mt-2 pt-3 border-t" style={{ borderColor: '#E0D8CC' }}>
-                <span className="text-[10px] font-medium" style={{ color: '#8B7D6B' }}>
+              <div className="flex flex-wrap gap-3 mt-2 pt-3 border-t" style={{ borderColor: 'var(--bar-bg)' }}>
+                <span className="text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
                   Tap a past day to log or undo:
                 </span>
                 {section?.members.map((m) => (
-                  <div key={m.id} className="flex items-center gap-1 text-[10px]" style={{ color: '#8B7D6B' }}>
+                  <div key={m.id} className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: m.color }} />
                     {m.name}
                   </div>
                 ))}
-                <div className="flex items-center gap-1 text-[10px]" style={{ color: '#C8BBA8' }}>
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#E0D8CC' }} />
+                <div className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--border-light)' }}>
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--bar-bg)' }} />
                   No one
                 </div>
               </div>
@@ -387,7 +402,7 @@ export default function SectionDetail() {
       {/* Per-person totals */}
       {section && (
         <div className="px-4 pt-6">
-          <h2 className="text-sm font-semibold mb-3" style={{ color: '#1E4A4A' }}>All-time Totals</h2>
+          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--heading)' }}>All-time Totals</h2>
           <div className="space-y-2">
             {section.totals.map((t) => {
               const maxCount = Math.max(...section.totals.map(x => x.count), 1);
@@ -397,11 +412,11 @@ export default function SectionDetail() {
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0" style={{ backgroundColor: t.color }}>
                     {t.name[0].toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium w-16 truncate" style={{ color: '#2D2A24' }}>{t.name}</span>
-                  <div className="flex-1 h-5 rounded-full overflow-hidden" style={{ backgroundColor: '#E0D8CC' }}>
+                  <span className="text-sm font-medium w-16 truncate" style={{ color: 'var(--text)' }}>{t.name}</span>
+                  <div className="flex-1 h-5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bar-bg)' }}>
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${t.color}, ${t.color}88)` }} />
                   </div>
-                  <span className="text-sm font-bold w-8 text-right" style={{ color: '#4A3F32' }}>{t.count}</span>
+                  <span className="text-sm font-bold w-8 text-right" style={{ color: 'var(--text-secondary)' }}>{t.count}</span>
                 </div>
               );
             })}
@@ -417,7 +432,7 @@ export default function SectionDetail() {
               onClick={() => handleToggleDate(todayStrVal)}
               disabled={busy}
               className="w-full py-4 rounded-xl text-base font-medium border transition-all disabled:opacity-50"
-              style={{ borderColor: '#D4C9B8', color: '#8B7D6B' }}
+              style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}
             >
               {busy ? '...' : 'Undo — remove today'}
             </button>
@@ -426,7 +441,7 @@ export default function SectionDetail() {
               onClick={() => handleToggleDate(todayStrVal)}
               disabled={busy}
               className="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] disabled:opacity-50"
-              style={{ backgroundColor: '#D97706' }}
+              style={{ backgroundColor: 'var(--accent)' }}
             >
               {busy ? '...' : '✅ I did this today!'}
             </button>
@@ -435,7 +450,7 @@ export default function SectionDetail() {
       )}
 
       {section && viewMonth !== today.getMonth() + 1 && (
-        <p className="px-4 pt-3 text-xs text-center" style={{ color: '#A89B88' }}>
+        <p className="px-4 pt-3 text-xs text-center" style={{ color: 'var(--text-light)' }}>
           Showing {MONTHS[viewMonth - 1]} {viewYear} —{' '}
           <button onClick={goToday} className="underline">jump to this month</button>
         </p>
@@ -443,35 +458,35 @@ export default function SectionDetail() {
 
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <form onSubmit={handleSaveEdit} className="w-full max-w-sm p-6 rounded-2xl shadow-xl border border-amber-200/40 space-y-4" style={{ backgroundColor: '#F5F0E8' }}>
+          <form onSubmit={handleSaveEdit} className="w-full max-w-sm p-6 rounded-2xl shadow-xl border border-amber-200/40 space-y-4" style={{ backgroundColor: 'var(--bg)' }}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>Edit Section</h2>
-              <button type="button" onClick={() => setShowEditModal(false)} className="p-1" style={{ color: '#8B7D6B' }}>✕</button>
+              <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>Edit Section</h2>
+              <button type="button" onClick={() => setShowEditModal(false)} className="p-1" style={{ color: 'var(--text-muted)' }}>✕</button>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#4A3F32' }}>Name</label>
-              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none" style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Name</label>
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none" style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }} />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: '#4A3F32' }}>Assign to</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Assign to</label>
               <div className="space-y-1.5">
                 {allPeople.map(p => {
                   const selected = editMembers.includes(p.id);
                   return (
                     <button key={p.id} type="button" onClick={() => toggleEditMember(p.id)}
                       className={`w-full flex items-center gap-2 p-2 rounded-lg border-2 transition-all ${selected ? 'border-amber-400' : 'border-transparent'}`}
-                      style={{ backgroundColor: selected ? 'rgba(217,119,6,0.08)' : 'rgba(255,255,255,0.5)' }}>
-                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: selected ? '#D97706' : '#C8BBA8', backgroundColor: selected ? '#D97706' : 'transparent' }}>
+                      style={{ backgroundColor: selected ? 'rgba(217,119,6,0.08)' : 'var(--card)' }}>
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: selected ? 'var(--accent)' : 'var(--border-light)', backgroundColor: selected ? 'var(--accent)' : 'transparent' }}>
                         {selected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                       </div>
                       <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: p.color }}>{p.name[0]}</div>
-                      <span className="text-sm font-medium" style={{ color: '#2D2A24' }}>{p.name}</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{p.name}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-            <button type="submit" disabled={saving || !editName.trim()} className="w-full py-2.5 rounded-xl text-white font-medium disabled:opacity-40" style={{ backgroundColor: '#1E4A4A' }}>
+            <button type="submit" disabled={saving || !editName.trim()} className="w-full py-2.5 rounded-xl text-white font-medium disabled:opacity-40" style={{ backgroundColor: 'var(--heading)' }}>
               {saving ? 'Saving...' : 'Save'}
             </button>
           </form>
@@ -480,20 +495,21 @@ export default function SectionDetail() {
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-xs p-6 rounded-2xl shadow-xl border border-red-200/40 space-y-4 text-center" style={{ backgroundColor: '#F5F0E8' }}>
-            <p className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#DC2626' }}>Delete "{section?.name}"?</p>
-            <p className="text-sm" style={{ color: '#8B7D6B' }}>All entries for this section will be permanently deleted. This cannot be undone.</p>
+          <div className="w-full max-w-xs p-6 rounded-2xl shadow-xl border border-red-200/40 space-y-4 text-center" style={{ backgroundColor: 'var(--bg)' }}>
+            <p className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--danger)' }}>Delete "{section?.name}"?</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>All entries for this section will be permanently deleted. This cannot be undone.</p>
             <div className="flex gap-2">
-              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ color: 'var(--text-secondary)', backgroundColor: 'rgba(0,0,0,0.05)' }}>
                 Cancel
               </button>
-              <button onClick={handleDelete} disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-40" style={{ backgroundColor: '#DC2626' }}>
+              <button onClick={handleDelete} disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-40" style={{ backgroundColor: 'var(--danger)' }}>
                 {saving ? '...' : 'Delete'}
               </button>
             </div>
           </div>
         </div>
       )}
+      <Confetti active={confetti} />
     </div>
   );
 }

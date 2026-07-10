@@ -1,5 +1,39 @@
 import bcrypt from 'bcryptjs';
 
+// ───────────── Streak helper ─────────────
+// Returns consecutive days back from today a person has an entry in a section
+async function calculateStreaks(db, sectionId, householdId, members) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  const streaks = [];
+
+  for (const member of members) {
+    const entries = (await db.execute({
+      sql: `SELECT date FROM entries
+            WHERE section_id = ? AND household_id = ? AND person_id = ?
+            ORDER BY date DESC LIMIT 365`,
+      args: [sectionId, householdId, member.id],
+    })).rows;
+
+    const dateSet = new Set(entries.map(e => e.date));
+    let streak = 0;
+    const d = new Date(todayStr);
+    // Count consecutive days backwards from today
+    while (dateSet.has(d.toISOString().split('T')[0])) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+
+    streaks.push({
+      person_id: member.id,
+      name: member.name,
+      color: member.color,
+      streak,
+    });
+  }
+
+  return streaks;
+}
+
 export const COLOR_PALETTE = [
   { name: 'Rose',     hex: '#E11D48' },
   { name: 'Orange',   hex: '#EA580C' },
@@ -134,6 +168,7 @@ export function sectionsRoutes(router) {
               ORDER BY p.name`,
         args: [section.id, req.household.id],
       })).rows;
+      section.streaks = await calculateStreaks(req.db, section.id, req.household.id, section.members);
     }
 
     res.json(sections);
@@ -313,6 +348,8 @@ export function sectionsRoutes(router) {
             ORDER BY count DESC`,
       args: [section.id, req.household.id],
     })).rows;
+
+    section.streaks = await calculateStreaks(req.db, section.id, req.household.id, section.members);
 
     res.json(section);
   });

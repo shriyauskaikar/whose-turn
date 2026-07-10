@@ -77,19 +77,19 @@ export default function PickPerson() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#F5F0E8' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="p-1 shrink-0" style={{ color: '#1E4A4A' }}>
+          <button onClick={() => navigate(-1)} className="p-1 shrink-0" style={{ color: 'var(--heading)' }}>
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
               Who are you?
             </h1>
-            <p className="text-sm" style={{ color: '#8B7D6B' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               {household.name}
             </p>
           </div>
@@ -103,12 +103,12 @@ export default function PickPerson() {
                 key={p.id}
                 onClick={() => handleSelect(p)}
                 className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-transparent hover:border-amber-400 transition-all"
-                style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}
+                style={{ backgroundColor: 'var(--card)' }}
               >
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0" style={{ backgroundColor: p.color }}>
                   {p.name[0].toUpperCase()}
                 </div>
-                <span className="text-lg font-medium flex-1 text-left" style={{ color: '#2D2A24' }}>{p.name}</span>
+                <span className="text-lg font-medium flex-1 text-left" style={{ color: 'var(--text)' }}>{p.name}</span>
                 {p.has_password && (
                   <span className="text-base" title="Profile locked">🔒</span>
                 )}
@@ -122,24 +122,24 @@ export default function PickPerson() {
           <button
             onClick={() => { setShowAdd(true); setAddError(''); }}
             className="w-full py-3 rounded-xl border-2 border-dashed text-base font-medium transition-all"
-            style={{ borderColor: '#C8BBA8', color: '#6B5E4A', backgroundColor: 'rgba(255,255,255,0.4)' }}
+            style={{ borderColor: 'var(--border-light)', color: 'var(--text-secondary)', backgroundColor: 'var(--card)' }}
           >
             + I'm new — add me
           </button>
         ) : (
-          <form onSubmit={handleAddSelf} className="space-y-3 p-4 rounded-2xl border border-amber-200/40" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
+          <form onSubmit={handleAddSelf} className="space-y-3 p-4 rounded-2xl border border-amber-200/40" style={{ backgroundColor: 'var(--card)' }}>
             <input
               type="text"
               value={newName}
               onChange={e => setNewName(e.target.value)}
               placeholder="Your name"
               className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none"
-              style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }}
               autoFocus
             />
 
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: '#4A3F32' }}>Color</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Color</label>
               <div className="flex flex-wrap gap-2">
                 {colors.map((c) => (
                   <button
@@ -160,8 +160,8 @@ export default function PickPerson() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: '#4A3F32' }}>
-                Profile PIN <span className="font-normal" style={{ color: '#A89B88' }}>(optional)</span>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Profile PIN <span className="font-normal" style={{ color: 'var(--text-light)' }}>(optional)</span>
               </label>
               <input
                 type="password"
@@ -169,7 +169,7 @@ export default function PickPerson() {
                 onChange={e => setNewPin(e.target.value)}
                 placeholder="At least 4 characters"
                 className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none"
-                style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }}
+                style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }}
               />
             </div>
 
@@ -180,7 +180,7 @@ export default function PickPerson() {
                 type="submit"
                 disabled={busy || !newName.trim()}
                 className="flex-1 py-2.5 rounded-lg text-white font-medium disabled:opacity-40"
-                style={{ backgroundColor: '#1E4A4A' }}
+                style={{ backgroundColor: 'var(--heading)' }}
               >
                 {busy ? '...' : 'Add me!'}
               </button>
@@ -188,7 +188,7 @@ export default function PickPerson() {
                 type="button"
                 onClick={() => { setShowAdd(false); setAddError(''); }}
                 className="px-4 py-2.5 rounded-lg text-sm font-medium"
-                style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}
+                style={{ color: 'var(--text-secondary)', backgroundColor: 'rgba(0,0,0,0.05)' }}
               >
                 Back
               </button>
@@ -199,7 +199,7 @@ export default function PickPerson() {
         <button
           onClick={logout}
           className="w-full mt-6 py-2 text-sm text-center"
-          style={{ color: '#A89B88' }}
+          style={{ color: 'var(--text-light)' }}
         >
           Switch household
         </button>
@@ -208,15 +208,15 @@ export default function PickPerson() {
       {/* PIN unlock modal */}
       {unlockingPerson && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <form onSubmit={handleUnlock} className="w-full max-w-xs p-6 rounded-2xl shadow-xl border border-amber-200/40" style={{ backgroundColor: '#F5F0E8' }}>
+          <form onSubmit={handleUnlock} className="w-full max-w-xs p-6 rounded-2xl shadow-xl border border-amber-200/40" style={{ backgroundColor: 'var(--bg)' }}>
             <div className="text-center mb-4">
               <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-2" style={{ backgroundColor: unlockingPerson.color }}>
                 {unlockingPerson.name[0].toUpperCase()}
               </div>
-              <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+              <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
                 {unlockingPerson.name}
               </h2>
-              <p className="text-xs mt-1" style={{ color: '#8B7D6B' }}>Enter your profile PIN</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Enter your profile PIN</p>
             </div>
             <input
               type="password"
@@ -224,7 +224,7 @@ export default function PickPerson() {
               onChange={e => setPinValue(e.target.value)}
               placeholder="PIN"
               className="w-full px-4 py-3 rounded-xl border text-lg text-center tracking-widest focus:outline-none focus:ring-2"
-              style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }}
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }}
               autoFocus
               maxLength={20}
             />
@@ -234,7 +234,7 @@ export default function PickPerson() {
                 type="submit"
                 disabled={busy || !pinValue}
                 className="flex-1 py-2.5 rounded-xl text-white font-medium disabled:opacity-40"
-                style={{ backgroundColor: '#D97706' }}
+                style={{ backgroundColor: 'var(--accent)' }}
               >
                 {busy ? '...' : 'Unlock'}
               </button>
@@ -242,7 +242,7 @@ export default function PickPerson() {
                 type="button"
                 onClick={() => { setUnlockingPerson(null); setPinError(''); }}
                 className="px-4 py-2.5 rounded-xl text-sm font-medium"
-                style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}
+                style={{ color: 'var(--text-secondary)', backgroundColor: 'rgba(0,0,0,0.05)' }}
               >
                 Cancel
               </button>

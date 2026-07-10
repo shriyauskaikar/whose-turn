@@ -58,24 +58,24 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#F5F0E8' }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+          <h1 className="text-4xl font-bold mb-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
             Whose Turn
           </h1>
-          <p className="text-sm" style={{ color: '#8B7D6B' }}>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
             {mode === 'signup' ? 'Create your household' : 'Sign in to your household'}
           </p>
         </div>
 
-        <div className="flex mb-6 rounded-xl overflow-hidden border border-amber-200/40" style={{ backgroundColor: 'rgba(255,255,255,0.5)' }}>
+        <div className="flex mb-6 rounded-xl overflow-hidden border border-amber-200/40" style={{ backgroundColor: 'var(--card)' }}>
           <button
             onClick={() => { setMode('login'); setError(''); }}
             className="flex-1 py-2.5 text-sm font-medium transition-all"
             style={{
-              backgroundColor: mode === 'login' ? '#1E4A4A' : 'transparent',
-              color: mode === 'login' ? 'white' : '#6B5E4A',
+              backgroundColor: mode === 'login' ? 'var(--heading)' : 'transparent',
+              color: mode === 'login' ? 'white' : 'var(--text-secondary)',
             }}
           >
             Log In
@@ -84,42 +84,42 @@ export default function Login() {
             onClick={() => { setMode('signup'); setError(''); }}
             className="flex-1 py-2.5 text-sm font-medium transition-all"
             style={{
-              backgroundColor: mode === 'signup' ? '#1E4A4A' : 'transparent',
-              color: mode === 'signup' ? 'white' : '#6B5E4A',
+              backgroundColor: mode === 'signup' ? 'var(--heading)' : 'transparent',
+              color: mode === 'signup' ? 'white' : 'var(--text-secondary)',
             }}
           >
             Sign Up
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-5 rounded-2xl border border-amber-200/40 shadow-sm" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
+        <form onSubmit={handleSubmit} className="space-y-4 p-5 rounded-2xl border border-amber-200/40 shadow-sm" style={{ backgroundColor: 'var(--card)' }}>
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>Household Name</label>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Household Name</label>
             <input type="text" value={hhName} onChange={e => setHhName(e.target.value)}
               placeholder='e.g. "Smith Family"'
               className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2"
-              style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} autoFocus />
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }} autoFocus />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>Password</label>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder={mode === 'signup' ? 'At least 4 characters' : 'Your household password'}
               className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2"
-              style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
+              style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }} />
           </div>
 
           {mode === 'signup' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>Your Name</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>Your Name</label>
                 <input type="text" value={yourName} onChange={e => setYourName(e.target.value)}
                   placeholder="e.g. Mom"
                   className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2"
-                  style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }} />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#4A3F32' }}>Your Color</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Your Color</label>
                 <div className="flex flex-wrap gap-2">
                   {ALL_COLORS.map(c => (
                     <button key={c.hex} type="button" onClick={() => setYourColor(c.hex)}
@@ -129,13 +129,13 @@ export default function Login() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#4A3F32' }}>
-                  Profile PIN <span className="text-xs font-normal" style={{ color: '#A89B88' }}>(optional — lock your profile)</span>
+                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Profile PIN <span className="text-xs font-normal" style={{ color: 'var(--text-light)' }}>(optional — lock your profile)</span>
                 </label>
                 <input type="password" value={yourPin} onChange={e => setYourPin(e.target.value)}
                   placeholder="At least 4 characters"
                   className="w-full px-4 py-2.5 rounded-lg border text-base focus:outline-none focus:ring-2"
-                  style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'white', color: 'var(--text)' }} />
               </div>
             </>
           )}
@@ -144,7 +144,7 @@ export default function Login() {
 
           <button type="submit" disabled={busy || !hhName || !password || (mode === 'signup' && (!yourName || !yourColor))}
             className="w-full py-3 rounded-xl text-white font-semibold text-base transition-all disabled:opacity-40 shadow-sm"
-            style={{ backgroundColor: '#D97706' }}>
+            style={{ backgroundColor: 'var(--accent)' }}>
             {busy ? '...' : mode === 'signup' ? 'Create Household' : 'Sign In'}
           </button>
         </form>

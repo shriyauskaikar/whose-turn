@@ -48,15 +48,15 @@ export default function CreateSection() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F5F0E8' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
       {/* Header */}
       <div className="px-4 pt-6 pb-4 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1" style={{ color: '#1E4A4A' }}>
+        <button onClick={() => navigate(-1)} className="p-1" style={{ color: 'var(--heading)' }}>
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: 'var(--heading)' }}>
           New Section
         </h1>
       </div>
@@ -65,7 +65,7 @@ export default function CreateSection() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section name */}
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: '#4A3F32' }}>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               What's the chore?
             </label>
             <input
@@ -75,9 +75,9 @@ export default function CreateSection() {
               placeholder="e.g. Making Tea, Walking the dog, Dishes"
               className="w-full px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2"
               style={{
-                borderColor: '#D4C9B8',
-                backgroundColor: 'rgba(255,255,255,0.7)',
-                color: '#2D2A24',
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--card)',
+                color: 'var(--text)',
               }}
               autoFocus
             />
@@ -85,7 +85,7 @@ export default function CreateSection() {
 
           {/* People selection */}
           <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: '#4A3F32' }}>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
               Who does this?
             </label>
             <div className="space-y-2">
@@ -100,14 +100,14 @@ export default function CreateSection() {
                       selected ? 'border-amber-400' : 'border-transparent'
                     }`}
                     style={{
-                      backgroundColor: selected ? 'rgba(217,119,6,0.08)' : 'rgba(255,255,255,0.5)',
+                      backgroundColor: selected ? 'rgba(217,119,6,0.08)' : 'var(--card)',
                     }}
                   >
                     <div
                       className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
                       style={{
-                        borderColor: selected ? '#D97706' : '#C8BBA8',
-                        backgroundColor: selected ? '#D97706' : 'transparent',
+                        borderColor: selected ? 'var(--accent)' : 'var(--border-light)',
+                        backgroundColor: selected ? 'var(--accent)' : 'transparent',
                       }}
                     >
                       {selected && (
@@ -119,7 +119,7 @@ export default function CreateSection() {
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: p.color }}>
                       {p.name[0].toUpperCase()}
                     </div>
-                    <span className="font-medium" style={{ color: '#2D2A24' }}>{p.name}</span>
+                    <span className="font-medium" style={{ color: 'var(--text)' }}>{p.name}</span>
                   </button>
                 );
               })}
@@ -133,7 +133,7 @@ export default function CreateSection() {
             type="submit"
             disabled={busy || !name.trim() || selectedIds.length === 0}
             className="w-full py-3 rounded-xl text-white font-semibold text-base transition-all disabled:opacity-40 shadow-sm"
-            style={{ backgroundColor: '#1E4A4A' }}
+            style={{ backgroundColor: 'var(--heading)' }}
           >
             {busy ? 'Creating...' : 'Create Section'}
           </button>
