@@ -134,6 +134,17 @@ export function createSection(name, memberIds) {
   });
 }
 
+export function updateSection(id, data) {
+  return request(`/sections/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteSection(id) {
+  return request(`/sections/${id}`, { method: 'DELETE' });
+}
+
 // ─────────── Entries ───────────
 export function createEntry(sectionId, personId, date) {
   return request('/entries', {

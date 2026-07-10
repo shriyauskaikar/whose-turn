@@ -185,6 +185,86 @@ export function sectionsRoutes(router) {
     }
   });
 
+  // PUT /api/sections/:id — rename or change members
+  router.put('/:id', async (req, res) => {
+    const db = req.db;
+    const { name, member_ids } = req.body;
+
+    const section = (await db.execute({
+      sql: 'SELECT id, name FROM sections WHERE id = ? AND household_id = ?',
+      args: [req.params.id, req.household.id],
+    })).rows[0];
+
+    if (!section) return res.status(404).json({ error: 'Section not found' });
+
+    try {
+      const tx = await db.transaction('write');
+
+      if (name) {
+        await tx.execute({
+          sql: 'UPDATE sections SET name = ? WHERE id = ?',
+          args: [name, section.id],
+        });
+      }
+
+      if (member_ids) {
+        // Remove old members, add new ones
+        await tx.execute({
+          sql: 'DELETE FROM section_members WHERE section_id = ?',
+          args: [section.id],
+        });
+        for (const personId of member_ids) {
+          await tx.execute({
+            sql: 'INSERT INTO section_members (household_id, section_id, person_id) VALUES (?, ?, ?)',
+            args: [req.household.id, section.id, personId],
+          });
+        }
+      }
+
+      await tx.commit();
+
+      const updated = (await db.execute({
+        sql: 'SELECT id, name, created_at FROM sections WHERE id = ?',
+        args: [section.id],
+      })).rows[0];
+
+      updated.members = (await db.execute({
+        sql: `SELECT p.id, p.name, p.color
+              FROM section_members sm
+              JOIN people p ON p.id = sm.person_id
+              WHERE sm.section_id = ? AND sm.household_id = ?
+              ORDER BY p.name`,
+        args: [section.id, req.household.id],
+      })).rows;
+
+      res.json(updated);
+    } catch (err) {
+      if (err.message?.includes('UNIQUE')) {
+        return res.status(409).json({ error: 'A section with that name already exists in your household' });
+      }
+      throw err;
+    }
+  });
+
+  // DELETE /api/sections/:id — remove section and all its entries
+  router.delete('/:id', async (req, res) => {
+    const db = req.db;
+    const sectionId = req.params.id;
+
+    const section = (await db.execute({
+      sql: 'SELECT id FROM sections WHERE id = ? AND household_id = ?',
+      args: [sectionId, req.household.id],
+    })).rows[0];
+
+    if (!section) return res.status(404).json({ error: 'Section not found' });
+
+    await db.execute({ sql: 'DELETE FROM entries WHERE section_id = ?', args: [sectionId] });
+    await db.execute({ sql: 'DELETE FROM section_members WHERE section_id = ?', args: [sectionId] });
+    await db.execute({ sql: 'DELETE FROM sections WHERE id = ?', args: [sectionId] });
+
+    res.json({ ok: true });
+  });
+
   router.get('/:id', async (req, res) => {
     const db = req.db;
     const { year, month } = req.query;

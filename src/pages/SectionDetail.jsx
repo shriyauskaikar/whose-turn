@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { getSection, createEntry, deleteEntry } from '../lib/api';
+import { getSection, createEntry, deleteEntry, updateSection, deleteSection, getPeople } from '../lib/api';
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -24,6 +24,15 @@ export default function SectionDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Edit/delete state
+  const [showMenu, setShowMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editMembers, setEditMembers] = useState([]);
+  const [allPeople, setAllPeople] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Calendar view state: which year+month to show
   const today = new Date();
@@ -63,6 +72,57 @@ export default function SectionDetail() {
   function goToday() {
     setViewYear(today.getFullYear());
     setViewMonth(today.getMonth() + 1);
+  }
+
+  // ─── Edit/Delete section ───
+  async function openEditModal() {
+    setEditName(section.name);
+    setEditMembers(section.members.map(m => m.id));
+    try {
+      const people = await getPeople();
+      setAllPeople(people);
+    } catch {}
+    setShowEditModal(true);
+  }
+
+  function toggleEditMember(id) {
+    setEditMembers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    if (!editName.trim()) return;
+    setSaving(true);
+    try {
+      const updates = { name: editName.trim() };
+      const origIds = section.members.map(m => m.id).sort().join(',');
+      const newIds = [...editMembers].sort().join(',');
+      if (origIds !== newIds) updates.member_ids = editMembers;
+      await updateSection(id, updates);
+      setShowEditModal(false);
+      setMessage('✅ Section updated!');
+      setTimeout(() => setMessage(''), 2000);
+      loadSection();
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setSaving(true);
+    try {
+      await deleteSection(id);
+      navigate('/dashboard');
+    } catch (err) {
+      setMessage('❌ ' + err.message);
+      setTimeout(() => setMessage(''), 3000);
+      setConfirmDelete(false);
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Build entry lookup
@@ -149,9 +209,32 @@ export default function SectionDetail() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
+        <h1 className="text-2xl font-bold flex-1" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>
           {section?.name || 'Section'}
         </h1>
+
+        {/* Menu button */}
+        <div className="relative">
+          <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-lg hover:bg-amber-50 transition-all" style={{ color: '#6B5E4A' }}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
+            </svg>
+          </button>
+
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-10 z-20 w-44 rounded-xl border shadow-lg overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#D4C9B8' }}>
+                <button onClick={() => { setShowMenu(false); setShowEditModal(true); openEditModal(); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-amber-50 transition-all" style={{ color: '#2D2A24' }}>
+                  ✏️ Edit section
+                </button>
+                <button onClick={() => { setShowMenu(false); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-4 py-3 text-sm hover:bg-red-50 transition-all" style={{ color: '#DC2626' }}>
+                  🗑️ Delete section
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Toast message */}
@@ -356,6 +439,60 @@ export default function SectionDetail() {
           Showing {MONTHS[viewMonth - 1]} {viewYear} —{' '}
           <button onClick={goToday} className="underline">jump to this month</button>
         </p>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <form onSubmit={handleSaveEdit} className="w-full max-w-sm p-6 rounded-2xl shadow-xl border border-amber-200/40 space-y-4" style={{ backgroundColor: '#F5F0E8' }}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#1E4A4A' }}>Edit Section</h2>
+              <button type="button" onClick={() => setShowEditModal(false)} className="p-1" style={{ color: '#8B7D6B' }}>✕</button>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: '#4A3F32' }}>Name</label>
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border text-sm focus:outline-none" style={{ borderColor: '#D4C9B8', backgroundColor: 'white', color: '#2D2A24' }} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#4A3F32' }}>Assign to</label>
+              <div className="space-y-1.5">
+                {allPeople.map(p => {
+                  const selected = editMembers.includes(p.id);
+                  return (
+                    <button key={p.id} type="button" onClick={() => toggleEditMember(p.id)}
+                      className={`w-full flex items-center gap-2 p-2 rounded-lg border-2 transition-all ${selected ? 'border-amber-400' : 'border-transparent'}`}
+                      style={{ backgroundColor: selected ? 'rgba(217,119,6,0.08)' : 'rgba(255,255,255,0.5)' }}>
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: selected ? '#D97706' : '#C8BBA8', backgroundColor: selected ? '#D97706' : 'transparent' }}>
+                        {selected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: p.color }}>{p.name[0]}</div>
+                      <span className="text-sm font-medium" style={{ color: '#2D2A24' }}>{p.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <button type="submit" disabled={saving || !editName.trim()} className="w-full py-2.5 rounded-xl text-white font-medium disabled:opacity-40" style={{ backgroundColor: '#1E4A4A' }}>
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-xs p-6 rounded-2xl shadow-xl border border-red-200/40 space-y-4 text-center" style={{ backgroundColor: '#F5F0E8' }}>
+            <p className="text-lg font-semibold" style={{ fontFamily: "'Fraunces', Georgia, serif", color: '#DC2626' }}>Delete "{section?.name}"?</p>
+            <p className="text-sm" style={{ color: '#8B7D6B' }}>All entries for this section will be permanently deleted. This cannot be undone.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 rounded-xl text-sm font-medium" style={{ color: '#6B5E4A', backgroundColor: 'rgba(0,0,0,0.05)' }}>
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-40" style={{ backgroundColor: '#DC2626' }}>
+                {saving ? '...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
