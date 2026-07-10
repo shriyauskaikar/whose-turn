@@ -86,7 +86,7 @@ export function authRoutes(router) {
     }
 
     const result = await db.execute({
-      sql: 'SELECT id, name, password_hash, created_at FROM households WHERE name = ?',
+      sql: 'SELECT id, name, password_hash, session_token, created_at FROM households WHERE name = ?',
       args: [household_name],
     });
 
@@ -101,11 +101,17 @@ export function authRoutes(router) {
       return res.status(401).json({ error: 'Wrong password' });
     }
 
-    const session_token = crypto.randomUUID();
-    await db.execute({
-      sql: 'UPDATE households SET session_token = ? WHERE id = ?',
-      args: [session_token, household.id],
-    });
+    // Reuse existing session token so all devices stay logged in
+    // Only generate a new one if the household doesn't have one yet
+    // (e.g. first login after signup with a different device, or after logout)
+    let session_token = household.session_token;
+    if (!session_token) {
+      session_token = crypto.randomUUID();
+      await db.execute({
+        sql: 'UPDATE households SET session_token = ? WHERE id = ?',
+        args: [session_token, household.id],
+      });
+    }
 
     const people = formatPeople((await db.execute({
       sql: 'SELECT id, name, color, created_at, password_hash FROM people WHERE household_id = ? ORDER BY name',
